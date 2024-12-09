@@ -169,6 +169,7 @@ function adminer_object()
     return new AdminerPlugin($plugins);
 }
 
+ini_set('display_errors', false);
 
 if (defined("SID") && session_status() !== PHP_SESSION_ACTIVE){
     session_start();

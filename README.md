@@ -1,132 +1,82 @@
-# SPŠ Ostrov PHP runtime environment
+# Upravené a aktualizované prostředí
 
-Toto je vývojové prostředí pro vývoj PHP aplikací v předmětu PVA.
+Toto prostředí je upravené a aktualizované z [repozitáře](https://github.com/marek-sterzik/spsostrov-php-runtime). Jedná se o aplikaci, která využívá **Symfony**, **MySQL** a **Node.js** pro kompilaci JavaScriptu. Celá aplikace běží v **Docker kontejnerech**.
 
-## Závislosti a instalace
+## Ovládání aplikace
 
-### Linux
-
-Pro provozování operačního systému založeném na Linuxu je potřeba udělat dvě věci:
-
-1. Nainstalovat balíček `docker` (u starších instalací také balíček `docker-compose` který je u novějších instalací už součástí balíčku `docker`).
-2. Přidat uživatele, který bude docker používat do skupiny `docker`.
-
-Na nejnovějších systémech Ubuntu by mělo být například možné nakonfigurovat nutné závislosti pomocí těchto dvou příkazu:
-```
-sudo apt install docker
-sudo usermod -a -G docker <uživatelské-jméno>
-```
-
-Přidání do skupiny se nicméně může projevit až po restartu (nejméně terminálu, někdy ale snad i celého systému, což je na Linux dost ostudné).
-Zda už se přidání do skupiny projevilo, lze zkontrolovat zavoláním příkazu `groups`.
-
-### Windows
-
-Instalaci ve Windows je věnována [samostatná stránka](README.windows.md).
-
-## Rychlý start
-
-Pro rychlý start systému, spusťte tuto sekvenci příkazů:
-
-```
-bin/docker configure
-bin/docker up
-bin/docker initialize
-```
-
-**Aplikaci přitom vždy ze zásady spouštíme jako obyčejný uživatel, nikdy jako root!**
-
-Aplikace se potom rozběhne na portu, který jste zadali v konfigurační části. Pokud jste ponechali základní port 80, budete mít aplikaci
-k dispozici na adrese:
-
-```
-http://localhost
-```
-
-Pokud jste zadali jiné číslo portu, bude aplikace dostupná na adrese:
-
-```
-http://localhost:<port>
-```
-
-## Konfigurace prostředí
-
-Prostředí se konfiguruje příkazem
-
-```
+Pro běh aplikace je možné nastavit port. Toto nastavení je nutné měnit pouze v případě potřeby změny portu, jelikož se ukládá.
+```shell
 bin/docker configure
 ```
 
-Po spuštění příkazu budete dotázáni na různé otázky.  V základním prostředí se nastavuje pouze číslo portu, na kterém bude webová aplikace poslouchat.
+### Spuštění, zastavení a restartování aplikace/kontejnerů
+- Spuštění: `bin/docker up`
+- Zastavení: `bin/docker down`
+- Restartování: `bin/docker restart`
 
-Prostředí stačí nakonfigurovat jednou před prvním spuštěním. V případě, nutnosti prostředí rekonfigurovat, je potřeba následně restartovat docker kontejnery pomocí dvojice příkazů `bin/docker restart`.
-
-## Spuštění a vypnutí kontejnerů
-
-Kontejnery spustíte příkazem:
+### Inicializace prostředí
+```shell
+bin/docker init
 ```
-bin/docker up
-```
-A zastavíte je příkazem:
-```
-bin/docker down
-```
-Popřípadě je můžete "odstřelit" příkazem:
-```
-bin/docker kill
-```
+Tento příkaz stáhne balíčky **yarn** a **composer**, zkompiluje JavaScript, provede migrace databáze a připraví prostředí. Tento krok je nutné provést při prvotní instalaci a následně jen při úpravách aplikace, jako je změna balíčků composeru nebo yarnu.
 
-Chcete-li kontejnery restartovat (tj. vypnout a zapnout), můžete použít příkaz:
-```
-bin/docker restart
-```
+### Kompilace JavaScriptu
+- Do složky `js/` lze přidat JavaScript, který se má zkompilovat (například skripty platné pro všechny stránky).
+- Kompilace JS:
+  ```shell
+  bin/jscompile
+  ```
+- Kompilace JS s automatickým hlídáním změn:
+  ```shell
+  bin/jscompile --watch
+  ```
 
-Běh kontejnerů je nutný, aby celá webová aplikace fungovala. Kontejnery obsahují veškerý software jako php procesor, popřípadě webový server.
+---
 
-## Inicializace aplikace
+## Práce s databází
 
-Aplikaci inicializujete příkazem:
-```
-bin/docker initialize
-```
-Význam tohoto kroku je připravit aplikaci k běhu systému. Systém je vytvořen tak, aby se do systému daly snadno přidávat nové inicializační kroky.
+### Vytvoření a úprava entit
+- Pro vytvoření entity:
+  ```shell
+  bin/console make:entity
+  ```
+  Po vytvoření entity můžete přidat pole a upravit entity soubor.
 
-Inicializaci je potřeba také provést pouze jednou, ale v případě některých změn může být potřeba aplikaci reinicializovat. Zejména jde například o změnu závislostí v souboru `composer.json`.
+### Migrace databáze
+- Vytvoření migrace na základě změn:
+  ```shell
+  bin/console make:migration
+  ```
+- Aplikace migrací:
+  ```shell
+  bin/console doctrine:migrations:migrate
+  ```
 
-## Další užitečné příkazy
+### Úvodní data a reset databáze
+- Skript pro nahrání úvodních dat se nachází v souboru `src/Command/LoadInitialDataCommand.php`. Lze zde přidat například základního uživatele nebo placeholder data.
+  ```shell
+  bin/console LoadInitialData
+  ```
+  Tento příkaz nahraje úvodní data.
 
-Chcete-li spustit `docker-compose` v rámci prostředí aplikace, spusťte příkaz:
+- Reset databáze:
+  ```shell
+  bin/docker db-reset
+  ```
+  Tento příkaz vymaže celou databázi, znovu ji vytvoří, provede migrace a nahraje úvodní data.
 
-```
-bin/docker compose
-```
-(tento příkaz je vhodný pouze pro pokročilé využití)
+---
 
-Pokud chcete spustit nějaký příkaz v rámci daného docker kontejneru, můžete jej spustit příkazem:
+## Základní obsah prostředí
 
-```
-bin/docker exec <kontejner> <příkaz> <argumenty>
-```
-Opět, tento příkaz je určen pouze pro pokročilé uživatele. V základním prostředí je definován jediný kontejner se jménem `webserver`, který obsahuje webserver a prostředí pro běh php.
+### AbstractController
+- **Custom AbstractController** obsahuje několik sdílených funkcí a podporuje dependency injection.
 
-## Adresáře a soubory
+### Popups
+- Implementace jednoduchých popupů.
 
-Celé prosředí obsahuje tyto adresáře:
+### Exception Listenery
+- Exception listenery pro zpracování response výjimek.
 
-* `bin` - místo pro skripty, které ovlivňují vývojové prostředí. V základní variantě obsahuje adresář pouze skript `docker`. Lze ale přidávat další příkazy pro různé účely.
-* `docker` - obsahuje definice docker kontejnerů. Jen pro pokročilé uživatelé.
-* `lib` - obsahuje pomocné soubory, které nejsou určeny k editaci.
-* `public` - obsahuje soubory, které jsou přímo viditelné přes webový server (statické soubory)
-* `scripts` - obsahuje skripty, které se používají ke konfiguraci a inicializaci prostředí. (do obou skriptů je možné přidávat další funkce)
-* `src` - obsahuje zdrojový kód celé aplikace
-* `templates` - může obsahovat různé šablony pro vytváření obsahu (v základní verzi prostředí není význam nijak definován)
-* `vendor` - o tento adresář se stará composer a nemělo by se do něj zasahovat ručně, pouze voláním composeru.
-
-Dále pak obsahuje tyto soubory:
-
-* `.config.env` - obsahuje konfiguraci celého prostředí, která byla vytvořena příkazem `bin/docker configure`. Soubor není přítomen, dokud se prostředí nezkonfiguruje.
-* `.gitignore` - soubor říkající systému `git`, které soubory a adresáře se nemají ukládat do repozitáře.
-* `README.md` - tento soubor s nápovědou
-* `composer.json` - konfigurační soubor pro composer.
-* `composer.lock` - pomocný stavový soubor pro composer (není určen pro přímou editaci)
-* `docker-compose.yml` - konfigurační soubor pro docker-compose - definuje kontejnery, které v rámci systému poběží.
+### Email Service
+- Stačí nastavit e-mail v souboru `.env` a nastavit adresu, odkud má e-mail přicházet, dále nastavit v `src/Service/EmailService.php`. Poté lze snadno odesílat e-maily pomocí `$emailService->sendEmail()`.
